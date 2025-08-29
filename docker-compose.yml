@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespw
+      POSTGRES_DB: auctiondb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  auctionservice:
+    build:
+      context: .
+      dockerfile: src/AuctionService/Dockerfile
+    image: ${DOCKER_REGISTRY-}auctionservice
+    depends_on:
+      - postgres
+    ports:
+      - "7001:7001"
+    networks:
+      - app-network
+    environment:
+      - ASPNETCORE_URLS=http://*:7001
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge
