@@ -6,11 +6,24 @@ services:
       POSTGRES_PASSWORD: postgrespw
       POSTGRES_DB: auctiondb
     ports:
-      - "5432:5432"
+      - 5432:5432
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - app-network
+      
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: mongopw
+    networks:
+      - app-network  
 
   auctionservice:
     build:
@@ -20,14 +33,29 @@ services:
     depends_on:
       - postgres
     ports:
-      - "7001:7001"
+      - 7001:7001
     networks:
       - app-network
     environment:
       - ASPNETCORE_URLS=http://*:7001
 
+  searchservice:
+    image: ${DOCKER_REGISTRY-}searchservice
+    build:
+      context: .
+      dockerfile: src/SearchService/Dockerfile
+    depends_on:
+      - mongodb
+    ports:
+      - 7002:7002
+    networks:
+      - app-network
+    environment:
+      - ASPNETCORE_URLS=http://*:7002
+
 volumes:
   pgdata:
+  mongodata:
 
 networks:
   app-network:

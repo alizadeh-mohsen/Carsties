@@ -2,10 +2,9 @@
 using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
-using MassTransit;
+using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Polly;
 
 namespace AuctionService.Controllers
 {
@@ -14,13 +13,16 @@ namespace AuctionService.Controllers
     public class AuctionsController(AuctionDbContext _context, IMapper _mapper) : ControllerBase
     {
         [HttpGet]
-        public async Task<ActionResult<List<AuctionDto>>> GetAuctions()
+        public async Task<ActionResult<List<AuctionDto>>> GetAuctions(string? date)
         {
-            var auctions = await _context.Auctions.Include(a => a.Item)
-                .OrderBy(a => a.Item.Make)
-                .ToListAsync();
+            var query = _context.Auctions.OrderBy(a => a.Item.Make).AsQueryable();
 
-            return Ok(_mapper.Map<List<AuctionDto>>(auctions));
+            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDateTime))
+            {
+                query = query.Where(a => a.UpdatedAt > parsedDateTime.ToUniversalTime());
+            }
+            var auctions = await query.ProjectTo<AuctionDto>(_mapper.ConfigurationProvider).ToListAsync();
+            return Ok(auctions);
         }
 
         [HttpGet("{id}")]
