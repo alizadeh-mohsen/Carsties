@@ -45,13 +45,21 @@ services:
       context: .
       dockerfile: src/SearchService/Dockerfile
     depends_on:
-      - mongodb
+      [mongodb, rabbbitmq]
     ports:
       - 7002:7002
     networks:
       - app-network
     environment:
       - ASPNETCORE_URLS=http://*:7002
+  rabbbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - app-network  
+
 
 volumes:
   pgdata:

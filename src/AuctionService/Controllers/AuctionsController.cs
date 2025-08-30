@@ -3,6 +3,8 @@ using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +12,7 @@ namespace AuctionService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuctionsController(AuctionDbContext _context, IMapper _mapper) : ControllerBase
+    public class AuctionsController(AuctionDbContext _context, IMapper _mapper, IPublishEndpoint _producer) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<AuctionDto>>> GetAuctions(string? date)
@@ -43,11 +45,18 @@ namespace AuctionService.Controllers
         public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto auctionDto)
         {
             var auction = _mapper.Map<Auction>(auctionDto);
-            auction.Seller = "todo";
+
+            auction.Seller = "test";
+
             _context.Auctions.Add(auction);
+
+            var newAuction = _mapper.Map<AuctionDto>(auction);
+
+            await _producer.Publish(_mapper.Map<AuctionCreated>(newAuction));
+
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetAuctionById), new { id = auction.Id }, _mapper.Map<AuctionDto>(auction));
+            return CreatedAtAction(nameof(GetAuctionById), new { id = auction.Id }, newAuction);
         }
 
 
@@ -67,6 +76,8 @@ namespace AuctionService.Controllers
             auction.Item.Color = auctionDto.Color ?? auction.Item.Color;
             auction.Item.Mileage = auctionDto.Mileage;
 
+            await _producer.Publish(_mapper.Map<AuctionUpdated>(auctionDto));
+
             var result = await _context.SaveChangesAsync() > 0;
             if (!result)
             {
@@ -79,7 +90,6 @@ namespace AuctionService.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAuction(Guid id)
         {
-
             var auction = await _context.Auctions.FindAsync(id);
             if (auction == null)
             {
@@ -87,6 +97,7 @@ namespace AuctionService.Controllers
             }
 
             _context.Auctions.Remove(auction);
+            await _producer.Publish(new AuctionDeleted { Id = id.ToString() });
             var result = await _context.SaveChangesAsync() > 0;
 
             if (!result)
