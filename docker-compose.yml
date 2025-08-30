@@ -29,30 +29,38 @@ services:
     build:
       context: .
       dockerfile: src/AuctionService/Dockerfile
-    image: ${DOCKER_REGISTRY-}auctionservice
+    image: kelarens/auctionservice
     depends_on:
       - postgres
+      - rabbitmq
     ports:
-      - 7001:7001
+      - 7001:8080
     networks:
       - app-network
     environment:
-      - ASPNETCORE_URLS=http://*:7001
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMq__Host=rabbitmq
+      - ConnectionStrings__DefaultConnection=Server=postgres:5432;User Id=postgres;Password=postgrespw;Database=auctiondb
 
   searchservice:
-    image: ${DOCKER_REGISTRY-}searchservice
+    image: kelarens/searchservice
     build:
       context: .
       dockerfile: src/SearchService/Dockerfile
     depends_on:
-      [mongodb, rabbbitmq]
+      - mongodb
+      - rabbitmq
     ports:
-      - 7002:7002
+      - 7002:8080
     networks:
       - app-network
     environment:
-      - ASPNETCORE_URLS=http://*:7002
-  rabbbitmq:
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMq__Host=rabbitmq
+      - ConnectionStrings__DefaultConnection=mongodb://admin:mongopw@mongodb
+      - AuctionServiceUrl=http://auctionservice
+
+  rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
       - 5672:5672

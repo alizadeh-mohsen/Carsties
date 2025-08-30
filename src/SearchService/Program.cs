@@ -17,23 +17,16 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumersFromNamespaceContaining<AuctionCreatedConsumer>();
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("search", false));
 
+   
+    
+    
     x.UsingRabbitMq((context, cfg) =>
     {
-        //var hostAddress = builder.Configuration["EventBusSettings:HostAddress"];
-        //if (!string.IsNullOrEmpty(hostAddress))
-        //{
-        //    // Use configured URI (includes username/password if provided)
-        //    cfg.Host(new Uri(hostAddress));
-        //}
-        //else
-        //{
-        //    // Fallback to default docker service name and credentials
-        //    cfg.Host("rabbitmq", h =>
-        //    {
-        //        h.Username("guest");
-        //        h.Password("guest");
-        //    });
-        //}
+        cfg.Host(builder.Configuration["RabbitMq:Host"], "/", h =>
+        {
+            h.Username(builder.Configuration.GetValue("RabbitMq:Username", "guest"));
+            h.Password(builder.Configuration.GetValue("RabbitMq:Password", ""));
+        });
 
         cfg.ReceiveEndpoint("search-auction-created", e =>
         {
